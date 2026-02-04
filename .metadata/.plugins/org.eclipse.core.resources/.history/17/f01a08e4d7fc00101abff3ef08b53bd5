@@ -1,0 +1,31 @@
+package com.cinebook.movieservice.controller;
+
+import com.cinebook.movieservice.entity.Seat;
+import com.cinebook.movieservice.service.MovieService;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
+
+@RestController
+@RequestMapping("/movies")
+public class MovieController {
+
+    @Autowired
+    private MovieService movieService; // Inject Service, NOT Repository
+
+    @GetMapping("/init")
+    public String initializeData() {
+        return movieService.initializeData();
+    }
+
+    @GetMapping("/{movieId}/seats")
+    public List<Seat> getSeats(@PathVariable Long movieId) {
+        return movieService.getSeats(movieId);
+    }
+
+    @PutMapping("/seats/{seatId}/book")
+    public boolean bookSeat(@PathVariable Long seatId) {
+        return movieService.bookSeat(seatId);
+    }
+}

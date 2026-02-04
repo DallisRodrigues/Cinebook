@@ -1,0 +1,41 @@
+package com.cinebook.movieservice.controller;
+
+import com.cinebook.movieservice.entity.Seat;
+import com.cinebook.movieservice.service.MovieService;
+import com.cinebook.movieservice.service.TmdbService;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
+
+@RestController
+@RequestMapping("/movies")
+public class MovieController {
+
+    @Autowired
+    private TmdbService tmdbService;
+    
+    @Autowired
+    private MovieService movieService;
+
+    // 1. Get Live "Now Playing" Data (Proxy to TMDB)
+    @GetMapping("/now-playing")
+    public String getNowPlaying() {
+        return tmdbService.getNowPlayingMovies();
+    }
+
+    // 2. Get Movie Details + Trailer (Proxy to TMDB)
+    @GetMapping("/{movieId}/details")
+    public String getDetails(@PathVariable String movieId) {
+        return tmdbService.getMovieDetails(movieId);
+    }
+
+    // 3. Get Seats (Internal DB)
+    // IMPORTANT: We pass the Title so we can create it if it doesn't exist
+    @GetMapping("/{movieId}/seats")
+    public List<Seat> getSeats(@PathVariable Long movieId, @RequestParam(defaultValue = "Unknown Movie") String title) {
+        // Lazy Init: Create seats if they don't exist
+        movieService.ensureMovieExists(movieId, title);
+        return movieService.getSeats(movieId);
+    }
+}

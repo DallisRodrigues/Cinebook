@@ -1,0 +1,88 @@
+package com.cinebook.movieservice.service;
+
+import com.cinebook.movieservice.entity.Movie;
+import com.cinebook.movieservice.entity.Seat;
+import com.cinebook.movieservice.repository.MovieRepository;
+import com.cinebook.movieservice.repository.SeatRepository;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.cache.annotation.Cacheable;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.util.List;
+
+@Service
+public class MovieService {
+
+    @Autowired
+    private MovieRepository movieRepo;
+
+    @Autowired
+    private SeatRepository seatRepo;
+
+    // 1. PUBLIC ENTRY POINT (Not Transactional itself, to avoid poisoning)
+    public void ensureMovieExists(Long tmdbId, String title) {
+        // Fast check to avoid opening a transaction if not needed
+        if (movieRepo.existsById(tmdbId)) {
+            return;
+        }
+        
+        try {
+            // Call the isolated method below
+            createMovieDataIsolated(tmdbId, title);
+        } catch (Exception e) {
+            // If this fails (e.g., race condition), we SWALLOW the error.
+            // This ensures the user still sees the page load.
+            System.out.println("⚠️ Movie already created by another thread. Continuing...");
+        }
+    }
+
+    // 2. ISOLATED TRANSACTION (The Magic Fix)
+    // 'REQUIRES_NEW' means: "Pause the main transaction, start a new one just for this."
+    // If this rolls back, it DOES NOT kill the main request.
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    public void createMovieDataIsolated(Long tmdbId, String title) {
+        // Double check inside the lock
+        if (movieRepo.existsById(tmdbId)) return;
+
+        System.out.println("✨ Creating New Movie Data: " + title);
+
+        Movie m = new Movie();
+        m.setId(tmdbId);
+        m.setTitle(title);
+        m.setDescription("Imported from TMDB");
+        movieRepo.save(m);
+
+        // Generate 20 Seats
+        for (int row = 0; row < 2; row++) {
+            char rowChar = (char) ('A' + row);
+            for (int i = 1; i <= 10; i++) {
+                Seat s = new Seat();
+                s.setSeatNumber(rowChar + "" + i);
+                s.setMovieId(tmdbId);
+                s.setStatus("AVAILABLE");
+                s.setPrice(row == 0 ? 350.00 : 250.00);
+                seatRepo.save(s);
+            }
+        }
+    }
+
+    // 3. Get Seats (Cached for speed)
+    @Cacheable(value = "movies", key = "#movieId")
+    public List<Seat> getSeats(Long movieId) {
+        return seatRepo.findByMovieId(movieId);
+    }
+
+    // 4. Book Seat Logic
+    @Transactional
+    public boolean bookSeat(Long seatId) {
+        Seat seat = seatRepo.findById(seatId).orElse(null);
+        if (seat != null && "AVAILABLE".equals(seat.getStatus())) {
+            seat.setStatus("BOOKED");
+            seatRepo.save(seat); // Optimistic locking handles concurrency here
+            return true;
+        }
+        return false;
+    }
+}

@@ -1,0 +1,5 @@
+package com.cinebook.movieservice.service;
+
+public class BmsScraperService {
+
+}

@@ -1,0 +1,5 @@
+package com.cinebook.movieservice.repository;
+
+public class CityRepository {
+
+}

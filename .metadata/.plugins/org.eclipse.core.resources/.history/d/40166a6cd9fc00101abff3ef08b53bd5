@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CineBook | Avengers: Secret Wars</title>
+    
+    <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@24,400,1,0" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css"/>
+
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: { sans: ['Inter', 'sans-serif'], header: ['Bebas Neue', 'sans-serif'] },
+                    colors: { brand: { red: '#E50914', dark: '#0f0f0f', surface: '#18181b' } }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-thumb { background: #333; border-radius: 4px; }
+        .glass-panel {
+            background: rgba(24, 24, 27, 0.7);
+            backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+        }
+        .movie-screen {
+            box-shadow: 0px -20px 60px rgba(255, 255, 255, 0.15);
+            transform: perspective(1000px) rotateX(-5deg) scale(0.95);
+        }
+        /* Seat States */
+        .seat-btn { transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); position: relative; }
+        .seat-btn:hover:not(:disabled) { transform: scale(1.15); z-index: 10; box-shadow: 0 0 15px rgba(229, 9, 20, 0.6); }
+        .seat-btn:disabled { cursor: not-allowed; opacity: 0.3; background-color: #222; border-color: #000; color: transparent; }
+        .swal2-popup { background: #18181b !important; color: white !important; border: 1px solid #333; }
+        .swal2-title { color: #E50914 !important; font-family: 'Bebas Neue', sans-serif !important; letter-spacing: 1px; }
+    </style>
+</head>
+<body class="bg-brand-dark text-white font-sans h-screen overflow-hidden select-none">
+
+    <div class="fixed inset-0 z-0">
+        <img src="https://image.tmdb.org/t/p/original/8Gxv8gSFCU0XGDykEGv7zR1n2ua.jpg" class="w-full h-full object-cover opacity-20 blur-sm scale-105" alt="Bg">
+        <div class="absolute inset-0 bg-gradient-to-t from-brand-dark via-brand-dark/80 to-transparent"></div>
+    </div>
+
+    <div class="relative z-10 h-full flex flex-col">
+        
+        <header class="w-full px-8 py-6 flex justify-between items-center animate__animated animate__fadeInDown">
+            <div class="flex items-center gap-2">
+                <span class="material-symbols-rounded text-brand-red text-3xl">movie_filter</span>
+                <h1 class="font-header text-3xl tracking-wide">CINE<span class="text-brand-red">BOOK</span></h1>
+            </div>
+            <div class="flex gap-4">
+                <span class="text-xs text-gray-500 self-center uppercase tracking-widest">Gateway Connected</span>
+                <div class="w-2 h-2 bg-green-500 rounded-full self-center animate-pulse shadow-[0_0_10px_#00ff00]"></div>
+            </div>
+        </header>
+
+        <main class="flex-1 w-full max-w-7xl mx-auto px-6 grid grid-cols-1 lg:grid-cols-12 gap-8 items-center">
+            
+            <div class="lg:col-span-4 space-y-6 animate__animated animate__fadeInLeft animate__delay-1s">
+                <span class="px-3 py-1 text-xs font-bold text-brand-red border border-brand-red/30 rounded-full bg-brand-red/10 uppercase tracking-widest">Premiere</span>
+                <h2 class="font-header text-7xl leading-none drop-shadow-2xl">Avengers <br> <span class="text-gray-600">Secret Wars</span></h2>
+                <div class="flex items-center gap-4 text-sm text-gray-400 font-medium">
+                    <span class="flex items-center gap-1 text-white"><span class="material-symbols-rounded text-yellow-500 text-lg">star</span> 9.8</span>
+                    <span>•</span> <span>IMAX 3D</span>
+                </div>
+                <p class="text-gray-400 leading-relaxed max-w-md text-sm border-l-2 border-brand-red pl-4">
+                    Phase 6 Finale. The Avengers assemble one last time to save the multiverse from total collapse.
+                </p>
+            </div>
+
+            <div class="lg:col-span-8 flex flex-col items-center justify-center animate__animated animate__fadeInUp animate__delay-1s">
+                <div class="w-full max-w-lg mb-12 text-center">
+                    <div class="h-1 bg-white/50 rounded-full mb-4 movie-screen"></div>
+                    <span class="text-[10px] text-gray-600 uppercase tracking-[0.3em]">Screen</span>
+                </div>
+
+                <div id="seat-loader" class="text-brand-red animate-pulse font-header text-xl tracking-widest">LOADING SEAT DATA...</div>
+                <div id="seat-grid" class="grid grid-cols-5 gap-4 mb-8 p-8 glass-panel rounded-3xl shadow-2xl hidden">
+                    </div>
+
+                <div class="flex gap-8 text-xs text-gray-500 font-bold uppercase tracking-wider">
+                    <div class="flex items-center gap-2"><div class="w-3 h-3 rounded bg-gray-600"></div> Available</div>
+                    <div class="flex items-center gap-2"><div class="w-3 h-3 rounded bg-brand-red shadow-[0_0_10px_#E50914]"></div> Selected</div>
+                    <div class="flex items-center gap-2"><div class="w-3 h-3 rounded bg-[#222] border border-[#333]"></div> Booked</div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script>
+        const API_GATEWAY = "http://localhost:8080";
+        const MOVIE_ID = 1; 
+        const USER_ID = Math.floor(Math.random() * 9999); // Random User
+
+        // 1. Initialize: Fetch Seats on Load
+        document.addEventListener("DOMContentLoaded", () => {
+            fetchSeats();
+        });
+
+        async function fetchSeats() {
+            try {
+                // Hitting the Gateway -> Movie Service
+                const response = await fetch(`${API_GATEWAY}/movies/${MOVIE_ID}/seats`);
+                if (!response.ok) throw new Error("Gateway Unreachable");
+                const seats = await response.json();
+                renderSeats(seats);
+            } catch (error) {
+                console.error(error);
+                document.getElementById('seat-loader').innerText = "⚠️ SYSTEM OFFLINE";
+                document.getElementById('seat-loader').classList.add('text-red-500');
+            }
+        }
+
+        function renderSeats(seats) {
+            const grid = document.getElementById('seat-grid');
+            const loader = document.getElementById('seat-loader');
+            
+            grid.innerHTML = ""; // Clear existing
+            loader.classList.add('hidden');
+            grid.classList.remove('hidden');
+
+            seats.forEach(seat => {
+                const isBooked = seat.status === 'BOOKED';
+                const btn = document.createElement('button');
+                
+                // Styling Logic
+                btn.className = `w-12 h-12 rounded-t-xl text-xs font-bold transition-all duration-300 border-b-4 flex items-center justify-center seat-btn
+                    ${isBooked 
+                        ? 'bg-[#1a1a1a] border-black text-transparent disabled' 
+                        : 'bg-gray-700 border-gray-900 text-gray-400 hover:bg-brand-red hover:text-white hover:border-red-900'}`;
+                
+                btn.innerText = seat.seatNumber;
+                btn.disabled = isBooked;
+                
+                if (!isBooked) {
+                    btn.onclick = () => bookSeat(seat.id, seat.seatNumber);
+                }
+
+                grid.appendChild(btn);
+            });
+        }
+
+        async function bookSeat(seatId, seatNumber) {
+            // Optimistic UI: Play Sound & Confirm
+            const confirm = await Swal.fire({
+                title: 'CONFIRM BOOKING',
+                text: `Book seat ${seatNumber} for $15.00?`,
+                icon: 'question',
+                showCancelButton: true,
+                confirmButtonColor: '#E50914',
+                cancelButtonColor: '#333',
+                confirmButtonText: 'YES, BOOK IT!',
+                background: '#18181b',
+                color: '#fff'
+            });
+
+            if (confirm.isConfirmed) {
+                // Show Loading Spinner
+                Swal.fire({
+                    title: 'PROCESSING...',
+                    html: 'Contacting Secure Gateway...',
+                    timerProgressBar: true,
+                    didOpen: () => { Swal.showLoading() },
+                    background: '#18181b',
+                    color: '#fff'
+                });
+
+                try {
+                    // Call Booking Service via Gateway
+                    const response = await fetch(`${API_GATEWAY}/bookings/create?userId=${USER_ID}&seatId=${seatId}&movieId=${MOVIE_ID}`);
+                    const text = await response.text();
+
+                    if (text.includes("Successful")) {
+                        // Success Animation
+                        Swal.fire({
+                            title: 'BOOKING CONFIRMED!',
+                            text: 'Your ticket is generating in the background.',
+                            icon: 'success',
+                            confirmButtonColor: '#E50914',
+                            background: '#18181b',
+                            color: '#fff'
+                        }).then(() => {
+                            fetchSeats(); // Refresh grid to show it as booked
+                        });
+                    } else {
+                        throw new Error(text); // Handle "Seat Taken" or Circuit Breaker
+                    }
+                } catch (error) {
+                    Swal.fire({
+                        title: 'BOOKING FAILED',
+                        text: error.message || "System Maintenance Mode",
+                        icon: 'error',
+                        confirmButtonColor: '#E50914',
+                        background: '#18181b',
+                        color: '#fff'
+                    });
+                }
+            }
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<section name="Workbench">
+	<section name="java.lang.Class">
+		<item key="selection" value="started"/>
+		<item key="wrap" value="true"/>
+		<item key="casesensitive" value="false"/>
+		<item key="wholeword" value="false"/>
+		<item key="incremental" value="false"/>
+		<item key="isRegEx" value="false"/>
+		<item key="replaceBarOpen" value="false"/>
+		<list key="findhistory">
+			<item value="onclick=&quot;window.location.href=&apos;index.html?id=${movie.id}&apos;&quot;onclick=&quot;window.location.href=&apos;showtimes.html?id=${movie.id}&amp;cityId=&apos; + currentCityId&quot;"/>
+			<item value="onclick=&quot;window.location.href=&apos;index.html?id=${movie.id}&apos;&quot;"/>
+			<item value="view"/>
+			<item value="viewall"/>
+			<item value="view all"/>
+			<item value="view a;;"/>
+			<item value="started"/>
+		</list>
+		<list key="replacehistory">
+		</list>
+	</section>
+	<section name="org.eclipse.ui.texteditor.FindReplaceDialog_dialogBounds">
+		<item key="DIALOG_X_ORIGIN" value="0"/>
+		<item key="DIALOG_Y_ORIGIN" value="0"/>
+		<item key="DIALOG_WIDTH" value="343"/>
+		<item key="DIALOG_HEIGHT" value="395"/>
+		<item key="DIALOG_FONT_NAME" value="1|Noto Sans|10.0|0|GTK|1|"/>
+	</section>
+</section>

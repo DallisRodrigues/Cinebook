@@ -1,0 +1,102 @@
+package com.cinebook.movieservice.controller;
+
+import com.cinebook.movieservice.entity.Seat;
+import com.cinebook.movieservice.repository.SeatRepository; // <--- Import This
+import com.cinebook.movieservice.service.BmsScraperService;
+import com.cinebook.movieservice.service.MovieService;
+import com.cinebook.movieservice.service.TmdbService;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
+import java.util.Map; // <--- Import This
+
+@RestController
+@RequestMapping("/movies")
+public class MovieController {
+
+    @Autowired
+    private TmdbService tmdbService;
+    
+    @Autowired
+    private MovieService movieService;
+
+    @Autowired
+    private BmsScraperService scraperService;
+
+    @Autowired
+    private SeatRepository seatRepo; // <--- Added this to save the JSON data directly
+
+    // 1. Get Live "Now Playing" Data (Proxy to TMDB)
+    @GetMapping("/now-playing")
+    public String getNowPlaying() {
+        return tmdbService.getNowPlayingMovies();
+    }
+
+    // 2. Get Movie Details + Trailer (Proxy to TMDB)
+    @GetMapping("/{movieId}/details")
+    public String getDetails(@PathVariable String movieId) {
+        return tmdbService.getMovieDetails(movieId);
+    }
+
+    // 3. Get Seats (Internal DB)
+    @GetMapping("/{movieId}/seats")
+    public List<Seat> getSeats(@PathVariable Long movieId, @RequestParam(defaultValue = "Unknown Movie") String title) {
+        // Lazy Init: Create seats if they don't exist
+        movieService.ensureMovieExists(movieId, title);
+        return movieService.getSeats(movieId);
+    }
+
+    // 4. Book a Seat
+    @PutMapping("/seats/{seatId}/book")
+    public boolean bookSeat(@PathVariable Long seatId) {
+        return movieService.bookSeat(seatId);
+    }
+
+    // 5. Trigger Scraper (The "Hard Way")
+    @PostMapping("/scrape")
+    public String triggerScraper(@RequestParam String url, @RequestParam Long movieId) {
+        scraperService.scrapeSeatLayout(url, movieId);
+        return "🕵️ Scraper started! Watch the CONSOLE for the hidden JSON data.";
+    }
+
+    // 6. Load JSON Data (The "Smart Way" - Simulation Mode)
+    // Usage: Send the JSON payload via Postman to this URL
+    @PostMapping("/load-seats")
+    public String loadSeatData(@RequestBody Map<String, Object> seatData) {
+        try {
+            // 1. Extract the "seatLayout" part
+            Map<String, Object> layout = (Map<String, Object>) seatData.get("seatLayout");
+            List<Map<String, Object>> rows = (List<Map<String, Object>>) layout.get("rows");
+
+            int seatsAdded = 0;
+            
+            // 2. Loop through every row (A, B, C...)
+            for (Map<String, Object> row : rows) {
+                // String rowCode = (String) row.get("rowCode"); // Optional: Use if you want to save row code separately
+                List<Map<String, Object>> seats = (List<Map<String, Object>>) row.get("seats");
+
+                // 3. Loop through every seat in that row
+                for (Map<String, Object> seatObj : seats) {
+                    Seat seat = new Seat();
+                    seat.setSeatNumber((String) seatObj.get("id")); // e.g., "A1"
+                    
+                    // Convert status string to our format
+                    String status = (String) seatObj.get("status");
+                    // Simple check: if it says "AVAILABLE", set it available, otherwise BOOKED
+                    seat.setStatus(status != null && status.equalsIgnoreCase("AVAILABLE") ? "AVAILABLE" : "BOOKED");
+                    
+                    // Hardcode Movie ID 1 for this demo (or extract from JSON if available)
+                    seat.setMovieId(1L); 
+                    
+                    seatRepo.save(seat);
+                    seatsAdded++;
+                }
+            }
+            return "✅ SUCCESS: Loaded " + seatsAdded + " seats into the database!";
+        } catch (Exception e) {
+            e.printStackTrace();
+            return "❌ ERROR: Could not process JSON. Check console.";
+        }
+    }
+}

@@ -1,0 +1,76 @@
+package com.cinebook.movieservice.service;
+
+import com.cinebook.movieservice.entity.Movie;
+import com.cinebook.movieservice.entity.Seat;
+import com.cinebook.movieservice.repository.MovieRepository;
+import com.cinebook.movieservice.repository.SeatRepository;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.cache.annotation.Cacheable;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.util.List;
+import java.util.Optional;
+
+@Service
+public class MovieService {
+
+    @Autowired
+    private MovieRepository movieRepo;
+
+    @Autowired
+    private SeatRepository seatRepo;
+
+    @Transactional
+    public String initializeData() {
+        // Keep your old init logic if you want, or just return a message
+        return "System Ready";
+    }
+
+    // --- NEW METHOD FOR HYBRID DB STRATEGY ---
+    @Transactional
+    public void ensureMovieExists(Long tmdbId, String title) {
+        Optional<Movie> existing = movieRepo.findById(tmdbId);
+        
+        if (existing.isEmpty()) {
+            System.out.println("✨ New Movie Detected: " + title + ". Generating 20 Seats...");
+            
+            // 1. Save Movie Metadata
+            Movie m = new Movie();
+            m.setId(tmdbId); // Use TMDB ID
+            m.setTitle(title);
+            m.setDescription("Imported from TMDB");
+            movieRepo.save(m);
+
+            // 2. Generate Seats (A1-A10, B1-B10)
+            for (int row = 0; row < 2; row++) {
+                char rowChar = (char) ('A' + row);
+                for (int i = 1; i <= 10; i++) {
+                    Seat s = new Seat();
+                    s.setSeatNumber(rowChar + "" + i);
+                    s.setMovieId(tmdbId);
+                    s.setStatus("AVAILABLE");
+                    // VIP (Row A) is expensive, Standard (Row B) is cheaper
+                    s.setPrice(row == 0 ? 350.00 : 250.00); 
+                    seatRepo.save(s);
+                }
+            }
+        }
+    }
+
+    @Cacheable(value = "movies", key = "#movieId")
+    public List<Seat> getSeats(Long movieId) {
+        return seatRepo.findByMovieId(movieId);
+    }
+
+    @Transactional
+    public boolean bookSeat(Long seatId) {
+        Seat seat = seatRepo.findById(seatId).orElse(null);
+        if (seat != null && "AVAILABLE".equals(seat.getStatus())) {
+            seat.setStatus("BOOKED");
+            seatRepo.save(seat);
+            return true;
+        }
+        return false;
+    }
+}

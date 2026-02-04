@@ -1,0 +1,49 @@
+package com.cinebook.movieservice.service;
+
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.cache.annotation.Cacheable;
+import org.springframework.stereotype.Service;
+import org.springframework.web.reactive.function.client.WebClient;
+
+@Service
+public class TmdbService {
+
+    private final WebClient webClient;
+
+    @Value("${tmdb.api.key}")
+    private String apiKey;
+
+    public TmdbService(@Value("${tmdb.api.base-url}") String baseUrl) {
+        this.webClient = WebClient.builder().baseUrl(baseUrl).build();
+    }
+
+    // Cache "Now Playing" for 30 minutes to avoid hitting API limits
+    @Cacheable(value = "nowPlaying", key = "'india'") 
+    public String getNowPlayingMovies() {
+        System.out.println("🎬 Fetching Live Data from TMDB API...");
+        return webClient.get()
+                .uri(uriBuilder -> uriBuilder
+                        .path("/movie/now_playing")
+                        .queryParam("api_key", apiKey)
+                        .queryParam("region", "IN") // India Specific
+                        .queryParam("language", "en-US")
+                        .build())
+                .retrieve()
+                .bodyToMono(String.class)
+                .block(); // Blocking for simplicity in this architecture
+    }
+
+    // Cache details for 24 hours
+    @Cacheable(value = "movieDetails", key = "#movieId")
+    public String getMovieDetails(String movieId) {
+        return webClient.get()
+                .uri(uriBuilder -> uriBuilder
+                        .path("/movie/" + movieId)
+                        .queryParam("api_key", apiKey)
+                        .queryParam("append_to_response", "credits,videos") // Get Cast & Trailer
+                        .build())
+                .retrieve()
+                .bodyToMono(String.class)
+                .block();
+    }
+}

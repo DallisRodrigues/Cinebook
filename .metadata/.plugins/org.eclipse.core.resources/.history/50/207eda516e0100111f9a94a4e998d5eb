@@ -1,0 +1,5 @@
+package com.cinebook.movieservice.controller;
+
+public class LocationController {
+
+}

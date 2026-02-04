@@ -1,0 +1,50 @@
+package com.cinebook.movieservice.service;
+
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.cache.annotation.Cacheable;
+import org.springframework.stereotype.Service;
+import org.springframework.web.reactive.function.client.WebClient;
+
+@Service
+public class TmdbService {
+
+    private final WebClient webClient;
+
+    @Value("${tmdb.api.key}")
+    private String apiKey;
+
+    public TmdbService(@Value("${tmdb.api.base-url}") String baseUrl) {
+        this.webClient = WebClient.builder().baseUrl(baseUrl).build();
+    }
+
+    // 1. Get "Now Showing" in Indian Theaters
+    @Cacheable(value = "nowPlaying", key = "'india'") 
+    public String getNowPlayingMovies() {
+        return webClient.get()
+                .uri(uriBuilder -> uriBuilder
+                        .path("/movie/now_playing")
+                        .queryParam("api_key", apiKey)
+                        .queryParam("region", "IN")
+                        .queryParam("language", "en-US")
+                        .queryParam("page", "1")
+                        .build())
+                .retrieve()
+                .bodyToMono(String.class)
+                .block();
+    }
+
+    // 2. Get DEEP Details (Cast, Trailer, Certifications)
+    @Cacheable(value = "movieDetails", key = "#movieId")
+    public String getMovieDetails(String movieId) {
+        return webClient.get()
+                .uri(uriBuilder -> uriBuilder
+                        .path("/movie/" + movieId)
+                        .queryParam("api_key", apiKey)
+                        // This MAGIC line fetches everything in 1 call to save API limits
+                        .queryParam("append_to_response", "credits,videos,release_dates,images")
+                        .build())
+                .retrieve()
+                .bodyToMono(String.class)
+                .block();
+    }
+}

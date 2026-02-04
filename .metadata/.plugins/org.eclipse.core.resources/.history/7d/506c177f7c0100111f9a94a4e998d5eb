@@ -1,0 +1,181 @@
+package com.cinebook.movieservice.config;
+
+import com.cinebook.movieservice.entity.Cinema;
+import com.cinebook.movieservice.entity.City;
+import com.cinebook.movieservice.repository.CinemaRepository;
+import com.cinebook.movieservice.repository.CityRepository;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.CommandLineRunner;
+import org.springframework.stereotype.Component;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.util.Arrays;
+import java.util.List;
+
+@Component
+public class LocationDataInitializer implements CommandLineRunner {
+
+    @Autowired
+    private CityRepository cityRepo;
+
+    @Autowired
+    private CinemaRepository cinemaRepo;
+
+    @Override
+    @Transactional
+    public void run(String... args) {
+        if (cityRepo.count() > 0) return; 
+
+        System.out.println("🇮🇳 Seeding ALL India Data...");
+
+        // 1. Create Cities
+        createCity("Mumbai", "Gateway of India Icon");
+        createCity("Delhi-NCR", "India Gate Icon");
+        createCity("Bengaluru", "Vidhana Soudha Icon");
+        createCity("Hyderabad", "Charminar Icon");
+        createCity("Ahmedabad", "Teen Darwaza Icon");
+        createCity("Chennai", "Temple Icon");
+        createCity("Kolkata", "Victoria Memorial Icon");
+        createCity("Pune", "Shaniwar Wada Icon");
+
+        // 2. Populate Mumbai Cinemas (FULL LIST FROM SCREENSHOTS)
+        City mumbai = cityRepo.findByName("Mumbai");
+        if (mumbai != null) {
+            List<String[]> mumbaiCinemas = Arrays.asList(
+                // SOUTH MUMBAI & CENTRAL
+                new String[]{"Sterling Cineplex", "Fort, Azad Maidan"},
+                new String[]{"Regal Cinema", "Colaba, Apollo Bunder"},
+                new String[]{"EROS INOX IMAX", "Churchgate"},
+                new String[]{"Mukta A2: New Excelsior", "Fort, Near VT Station"},
+                new String[]{"INOX Laserplex: CR2", "Nariman Point"},
+                new String[]{"Metro INOX Cinemas", "Marine Lines"},
+                new String[]{"Maratha Mandir", "Mumbai Central"},
+                new String[]{"Nishat Cinema", "Grant Road"},
+                new String[]{"Chitra Cinema", "Dadar (East)"},
+                new String[]{"Plaza Cinema", "Dadar (West)"},
+                new String[]{"Gold Cinema: Dadar", "Dadar (East)"},
+                new String[]{"INOX: Nakshatra Mall", "Dadar (West)"},
+                new String[]{"Citylight Cinema", "Mahim"},
+                new String[]{"Movietime Star City", "Matunga (West)"},
+                new String[]{"PVR ICON: Phoenix Palladium", "Lower Parel"},
+                new String[]{"Mukta A2: Jai Hind", "Lalbaugh"},
+                new String[]{"MovieMax: Sion", "Sion Circle"},
+                new String[]{"Miraj Cinemas: IMAX", "Wadala"},
+
+                // BANDRA TO ANDHERI
+                new String[]{"G7 Multiplex", "Bandra (West)"},
+                new String[]{"PVR: Le Reve-Globus Mall", "Bandra (West)"},
+                new String[]{"Movietime Suburbia", "Bandra (West)"},
+                new String[]{"Mukta A2: Orion", "Santacruz (East)"},
+                new String[]{"Gold Cinema: Santacruz", "Santacruz (West)"},
+                new String[]{"PVR: Lido", "Juhu, Santa Cruz (W)"},
+                new String[]{"PVR: Dynamix Mall", "Juhu"},
+                new String[]{"Maison INOX: Jio World Plaza", "BKC"},
+                new String[]{"Maison PVR: Jio World Drive", "BKC"},
+                new String[]{"Bahar Cinema", "Vile Parle (East)"},
+                new String[]{"Mukta A2: SunCity", "Vile Parle (East)"},
+                new String[]{"PVR ICON: Infiniti", "Andheri (West)"},
+                new String[]{"PVR: Citi Mall", "Andheri (West)"},
+                new String[]{"PVR: C&B Square Chakala", "Andheri (East)"},
+                new String[]{"MovieMax: Andheri", "Andheri-Kurla Road"},
+                new String[]{"Fun Republic: Cinepolis", "Andheri (West)"},
+
+                // MALAD TO BORIVALI
+                new String[]{"PVR: Infiniti", "Malad (West)"},
+                new String[]{"INOX: Megaplex Inorbit", "Malad (West)"},
+                new String[]{"MOVIETIME: Malad", "Malad (West)"},
+                new String[]{"Kasturba Cinema", "Malad (West)"},
+                new String[]{"Gold Cinema: Malad", "Malad"},
+                new String[]{"Topiwala Mukta A2", "Goregaon (West)"},
+                new String[]{"HDFC Millennia PVR ICON", "Oberoi Mall, Goregaon"},
+                new String[]{"MOVIE TIME: HUB", "Goregaon (East)"},
+                new String[]{"Miraj Cinemas: Anupam", "Goregaon (East)"},
+                new String[]{"INOX: Raghuleela Mall", "Kandivali (West)"},
+                new String[]{"PVR: Milap", "Kandivali (West)"},
+                new String[]{"Maxus Cinemas", "Kandivali (East)"},
+                new String[]{"INOX Megaplex: Sky City", "Borivali (East)"},
+                new String[]{"Ajanta Cinema Cinex", "Borivali (West)"},
+                new String[]{"Gold Cinema: Sona", "Borivali (East)"},
+                new String[]{"Maxus Cinemas", "Borivali (West)"},
+                new String[]{"Movietime: Dahisar", "Dahisar (East)"},
+                new String[]{"INOX: Thakur Mall", "Dahisar"},
+
+                // THANE & BEYOND
+                new String[]{"Cinepolis: Lake Shore", "Thane (Viviana Mall)"},
+                new String[]{"Cinepolis: VIP Lake Shore", "Thane (Viviana Mall)"},
+                new String[]{"INOX: Korum Mall", "Thane (West)"},
+                new String[]{"Anand Cinema", "Thane (East)"},
+                new String[]{"Gold Cinema: Shivaji Road", "Thane (West)"},
+                new String[]{"MovieMax: Wonder Mall", "Thane"},
+                new String[]{"MovieMax: Eternity Mall", "Thane"},
+                new String[]{"Cinepolis: High Street", "Thane"},
+                new String[]{"Miraj Cinemas: R Mall", "Mulund"},
+                new String[]{"Devgn Cinex", "Mulund"},
+                new String[]{"PVR: Market City", "Kurla (West)"},
+                new String[]{"Bharat Cineplex", "Kurla (West)"},
+                new String[]{"INOX: R-City", "Ghatkopar (West)"},
+                new String[]{"PVR: Odeon Mall", "Ghatkopar"},
+                new String[]{"Movietime Cubic Mall", "Chembur"},
+
+                // NAVI MUMBAI
+                new String[]{"Cinepolis: Nexus Seawoods", "Nerul"},
+                new String[]{"INOX: Palm Beach", "Vashi"},
+                new String[]{"INOX: Raghuleela Mall", "Vashi"},
+                new String[]{"Cinepolis: Aurum", "Ghansoli"},
+                new String[]{"Fun Square Cinema", "Sanpada"},
+                new String[]{"BMX Cinemas", "Littleworld Kharghar"},
+                new String[]{"K.K. Cinema", "Kamothe"},
+                new String[]{"PVR: Orion Mall", "Panvel"},
+                new String[]{"Miraj Cinemas: Cineraj", "Panvel"},
+
+                // KALYAN / DOMBIVALI / AMBERNATH / BADLAPUR
+                new String[]{"MovieMax: SM5", "Kalyan"},
+                new String[]{"Mukta A2: Triveni Grande", "Kalyan"},
+                new String[]{"INOX: Metro Junction", "Kalyan"},
+                new String[]{"Miraj Cinemas: Dombivali", "Dombivali (East)"},
+                new String[]{"Tilak Cineplex", "Dombivali"},
+                new String[]{"Gopi Cinema", "Dombivali"},
+                new String[]{"PVR: Lodha Xperia", "Palava"},
+                new String[]{"Funcity Big Cinemas", "Ulhasnagar"},
+                new String[]{"Miraj Cinemas: Ashok", "Ulhasnagar"},
+                new String[]{"Aman Theatre", "Ulhasnagar"},
+                new String[]{"Venus Cinema", "Ulhasnagar"},
+                new String[]{"BMX Cinemas", "Ambernath"},
+                new String[]{"Miraj Cinemas: Star", "Ambernath"},
+                new String[]{"Vaishali Cinema", "Badlapur"},
+                new String[]{"PVR: Haseen", "Bhiwandi"},
+                new String[]{"Nazrana Cinema", "Bhiwandi"},
+
+                // VASAI - VIRAR
+                new String[]{"Rassaz Multiplex", "Mira Road"},
+                new String[]{"MovieMax: Mira Road", "Mira Road"},
+                new String[]{"Maxus Cinemas", "Bhayander"},
+                new String[]{"Miraj Cinemas: Dattani", "Vasai"},
+                new String[]{"KT Vision Cinema", "Vasai"},
+                new String[]{"K Movie Star", "Vasai (West)"},
+                new String[]{"PVR: The Capital Mall", "Nalasopara"},
+                new String[]{"Miraj Cinemas: Funfiesta", "Nalasopara"},
+                new String[]{"Woodland Cinemas", "Virar"},
+                new String[]{"Rockstar Nova Cinemaz", "Virar"},
+                new String[]{"Movie Max V", "Virar"}
+            );
+
+            for (String[] data : mumbaiCinemas) {
+                Cinema c = new Cinema();
+                c.setName(data[0]);
+                c.setAddress(data[1]);
+                c.setType("Multiplex");
+                c.setCity(mumbai);
+                cinemaRepo.save(c);
+            }
+            System.out.println("✅ Loaded " + mumbaiCinemas.size() + " Cinemas for Mumbai.");
+        }
+    }
+
+    private void createCity(String name, String icon) {
+        City c = new City();
+        c.setName(name);
+        c.setIconUrl(icon);
+        cityRepo.save(c);
+    }
+}

@@ -1,0 +1,5 @@
+package com.cinebook.movieservice.config;
+
+public class LocationDataInitializer {
+
+}

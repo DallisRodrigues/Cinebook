@@ -1,0 +1,19 @@
+package com.cinebook.movieservice.entity;
+
+import jakarta.persistence.*;
+import lombok.Data;
+import java.util.List;
+
+@Entity
+@Data
+public class City {
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+
+    private String name;
+    private String iconUrl; // URL for the city icon (Gate of India, etc.)
+
+    @OneToMany(mappedBy = "city", cascade = CascadeType.ALL)
+    private List<Cinema> cinemas;
+}

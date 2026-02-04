@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Select Seats | CineBook</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: { sans: ['Manrope', 'sans-serif'] },
+                    colors: { brand: { red: '#E50914', dark: '#F2F2F2', selected: '#1EA83C', sold: '#ddd' } }
+                }
+            }
+        }
+    </script>
+    <style>
+        body { background-color: #F5F5F7; color: #333; } /* Light Theme like BMS */
+        .seat {
+            width: 28px; height: 28px;
+            border: 1px solid #1EA83C; /* Green Outline */
+            border-radius: 4px;
+            font-size: 10px;
+            display: flex; align-items: center; justify-content: center;
+            cursor: pointer;
+            transition: all 0.2s;
+            background: white;
+            color: #1EA83C;
+        }
+        .seat:hover { background: #1EA83C; color: white; }
+        
+        .seat.selected { background: #1EA83C; color: white; box-shadow: 0 0 5px rgba(30,168,60,0.5); }
+        
+        .seat.sold { 
+            background: #E0E0E0; border-color: #CCC; color: #999; 
+            cursor: not-allowed; pointer-events: none; 
+        }
+
+        .screen {
+            height: 40px; width: 100%;
+            background: linear-gradient(to bottom, #dbeafe, transparent);
+            transform: perspective(400px) rotateX(-10deg);
+            opacity: 0.5;
+            margin-top: 40px;
+        }
+    </style>
+</head>
+<body class="flex flex-col h-screen">
+
+    <header class="bg-white shadow-sm px-6 py-4 flex justify-between items-center z-10">
+        <div>
+            <h1 class="text-lg font-bold text-gray-800" id="movie-title">Loading...</h1>
+            <p class="text-xs text-gray-500" id="cinema-info">PVR Cinemas • Today, 9:30 PM</p>
+        </div>
+        <button class="text-brand-red text-sm font-bold border border-gray-300 px-4 py-2 rounded" onclick="history.back()">Close</button>
+    </header>
+
+    <main class="flex-1 overflow-y-auto p-4 pb-32 flex flex-col items-center">
+        
+        <div id="layout-container" class="w-full max-w-2xl bg-white p-6 rounded shadow-sm min-h-[500px]">
+            <div class="text-center text-gray-400 py-20 animate-pulse" id="loader">Loading Seat Map...</div>
+        </div>
+
+        <div class="w-full max-w-lg mx-auto text-center mt-4">
+            <div class="screen"></div>
+            <p class="text-xs text-gray-400 mt-2">All eyes this way please</p>
+        </div>
+
+    </main>
+
+    <div id="payment-bar" class="fixed bottom-0 w-full bg-white shadow-[0_-4px_10px_rgba(0,0,0,0.1)] p-4 hidden flex justify-center">
+        <div class="max-w-2xl w-full flex justify-between items-center">
+            <button id="pay-btn" onclick="processBooking()" 
+                class="bg-[#F84464] text-white font-bold px-12 py-3 rounded-lg w-full text-lg hover:bg-red-600 transition shadow-lg">
+                Pay ₹ 0
+            </button>
+        </div>
+    </div>
+
+    <script>
+        const API_GATEWAY = "http://localhost:8080";
+        const urlParams = new URLSearchParams(window.location.search);
+        const TMDB_ID = urlParams.get('tmdbId') || urlParams.get('id') || 550;
+        const MOVIE_TITLE = urlParams.get('title') || "Movie";
+        
+        let selectedSeats = new Set(); // Stores Seat IDs
+        let seatDataMap = {}; // Stores Seat Object by ID for price calc
+
+        document.addEventListener("DOMContentLoaded", () => {
+            document.getElementById('movie-title').innerText = MOVIE_TITLE;
+            fetchSeats();
+        });
+
+        async function fetchSeats() {
+            try {
+                // Ensure backend data exists
+                const res = await fetch(`${API_GATEWAY}/movies/${TMDB_ID}/seats?title=${encodeURIComponent(MOVIE_TITLE)}`);
+                const seats = await res.json();
+                
+                if(seats.length === 0) {
+                    setTimeout(() => location.reload(), 1500); // Retry logic
+                } else {
+                    renderSeatingChart(seats);
+                }
+            } catch(e) {
+                console.error(e);
+            }
+        }
+
+        function renderSeatingChart(seats) {
+            const container = document.getElementById('layout-container');
+            container.innerHTML = ""; // Clear loader
+
+            // 1. Group Seats by Category (Price)
+            const categories = {
+                "Recliner": { price: 570, seats: [] },
+                "Prime": { price: 310, seats: [] },
+                "Classic": { price: 290, seats: [] }
+            };
+
+            seats.forEach(s => {
+                seatDataMap[s.id] = s; // Map for quick lookup
+                if (s.price >= 500) categories["Recliner"].seats.push(s);
+                else if (s.price >= 300) categories["Prime"].seats.push(s);
+                else categories["Classic"].seats.push(s);
+            });
+
+            // 2. Render Each Category
+            for (const [name, data] of Object.entries(categories)) {
+                if (data.seats.length === 0) continue;
+
+                // Category Header
+                const catHeader = document.createElement('div');
+                catHeader.className = "text-xs text-gray-400 font-bold mt-6 mb-2 border-b pb-1 flex justify-between";
+                catHeader.innerHTML = `<span>${name}</span> <span>₹${data.price}</span>`;
+                container.appendChild(catHeader);
+
+                // Group by Row (e.g., A, B, C)
+                const rows = {};
+                data.seats.forEach(s => {
+                    const rowName = s.seatNumber.charAt(0);
+                    if (!rows[rowName]) rows[rowName] = [];
+                    rows[rowName].push(s);
+                });
+
+                // Render Rows
+                // Sort rows reverse alphabetically (L at top, A at bottom)
+                Object.keys(rows).sort().reverse().forEach(rowLabel => {
+                    const rowDiv = document.createElement('div');
+                    rowDiv.className = "flex items-center gap-4 mb-2";
+                    
+                    // Row Label (A, B...)
+                    rowDiv.innerHTML = `<div class="text-xs text-gray-400 w-4">${rowLabel}</div>`;
+                    
+                    // Seat Container
+                    const seatsDiv = document.createElement('div');
+                    seatsDiv.className = "flex gap-2 flex-1 justify-center";
+
+                    // Sort seats numerically (A1, A2...)
+                    rows[rowLabel].sort((a,b) => 
+                        parseInt(a.seatNumber.substring(1)) - parseInt(b.seatNumber.substring(1))
+                    ).forEach(seat => {
+                        const btn = document.createElement('button');
+                        const isSold = seat.status === 'BOOKED';
+                        
+                        btn.className = `seat ${isSold ? 'sold' : ''}`;
+                        btn.innerText = seat.seatNumber.substring(1); // Show only number
+                        btn.onclick = () => toggleSeat(seat.id, btn);
+                        
+                        seatsDiv.appendChild(btn);
+                    });
+
+                    rowDiv.appendChild(seatsDiv);
+                    container.appendChild(rowDiv);
+                });
+            }
+        }
+
+        function toggleSeat(id, element) {
+            if (selectedSeats.has(id)) {
+                selectedSeats.delete(id);
+                element.classList.remove('selected');
+            } else {
+                if (selectedSeats.size >= 10) return Swal.fire("Max 10 seats allowed");
+                selectedSeats.add(id);
+                element.classList.add('selected');
+            }
+            updatePaymentBar();
+        }
+
+        function updatePaymentBar() {
+            const bar = document.getElementById('payment-bar');
+            const btn = document.getElementById('pay-btn');
+            
+            if (selectedSeats.size > 0) {
+                let total = 0;
+                selectedSeats.forEach(id => total += seatDataMap[id].price);
+                
+                btn.innerText = `Pay ₹ ${total}`;
+                bar.classList.remove('hidden');
+            } else {
+                bar.classList.add('hidden');
+            }
+        }
+
+        async function processBooking() {
+            Swal.fire({
+                title: 'Processing Payment',
+                text: 'Please wait...',
+                didOpen: () => Swal.showLoading()
+            });
+
+            try {
+                // Send LIST of IDs to backend
+                const response = await fetch(`${API_GATEWAY}/movies/seats/book-multiple`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(Array.from(selectedSeats))
+                });
+
+                const success = await response.json();
+
+                if (success) {
+                    Swal.fire({
+                        icon: 'success',
+                        title: 'Booking Confirmed!',
+                        text: 'Your tickets have been sent.',
+                        confirmButtonColor: '#E50914'
+                    }).then(() => location.reload());
+                } else {
+                    throw new Error("Seats were just taken! Try others.");
+                }
+            } catch (e) {
+                Swal.fire('Booking Failed', e.message, 'error');
+            }
+        }
+    </script>
+</body>
+</html>

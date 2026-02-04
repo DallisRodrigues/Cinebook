@@ -1,0 +1,91 @@
+package com.cinebook.movieservice.config;
+
+
+import com.cinebook.movieservice.entity.Cinema;
+import com.cinebook.movieservice.entity.City;
+import com.cinebook.movieservice.repository.CinemaRepository;
+import com.cinebook.movieservice.repository.CityRepository;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.CommandLineRunner;
+import org.springframework.stereotype.Component;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.util.Arrays;
+import java.util.List;
+
+@Component
+public class LocationDataInitializer implements CommandLineRunner {
+
+    @Autowired
+    private CityRepository cityRepo;
+
+    @Autowired
+    private CinemaRepository cinemaRepo;
+
+    @Override
+    @Transactional
+    public void run(String... args) {
+        if (cityRepo.count() > 0) return; // Don't duplicates data if already exists
+
+        System.out.println("🇮🇳 Seeding Indian Cities & Mumbai Cinemas...");
+
+        // 1. Create Major Cities
+        createCity("Mumbai", "Gateway of India Icon");
+        createCity("Delhi-NCR", "India Gate Icon");
+        createCity("Bengaluru", "Vidhana Soudha Icon");
+        createCity("Hyderabad", "Charminar Icon");
+        createCity("Chandigarh", "Open Hand Icon");
+        createCity("Ahmedabad", "Teen Darwaza Icon");
+        createCity("Pune", "Shaniwar Wada Icon");
+        createCity("Chennai", "Temple Icon");
+        createCity("Kolkata", "Victoria Memorial Icon");
+        createCity("Kochi", "Palm Tree Icon");
+
+        // 2. Populate Mumbai Cinemas (Based on your Screenshots)
+        City mumbai = cityRepo.findByName("Mumbai");
+        if (mumbai != null) {
+            List<String[]> mumbaiCinemas = Arrays.asList(
+                // {Name, Location/Address}
+                new String[]{"Cinepolis: Nexus Seawoods", "Nerul, Navi Mumbai"},
+                new String[]{"Cinepolis: Lake Shore", "Thane (EX Viviana Mall)"},
+                new String[]{"Gold Cinema: Santacruz (W)", "Milan Subway Road, Santacruz West"},
+                new String[]{"INOX Megaplex: Sky City Mall", "Borivali (East)"},
+                new String[]{"INOX: R-City", "Ghatkopar (West)"},
+                new String[]{"MOVIE TIME: HUB", "Goregaon (East)"},
+                new String[]{"INOX: Megaplex, Inorbit Mall", "Malad (West)"},
+                new String[]{"HDFC Millennia PVR ICON: Oberoi Mall", "Goregaon (East)"},
+                new String[]{"BMX Cinemas (BalajiMovieplex)", "Littleworld Kharghar"},
+                new String[]{"PVR: Orion Mall", "Panvel"},
+                new String[]{"PVR: The Capital Mall", "Nalasopara (E)"},
+                new String[]{"Maxus Cinemas", "Bhayander"},
+                new String[]{"PVR ICON: Phoenix Palladium", "Lower Parel"},
+                new String[]{"Metro INOX Cinemas", "Marine Lines"},
+                new String[]{"G7 Multiplex", "Bandra (W)"},
+                new String[]{"PVR: C&B Square Chakala", "Andheri (E)"},
+                new String[]{"INOX: Raghuleela Mall", "Kandivali (W)"},
+                new String[]{"Movietime Cubic Mall", "Chembur"},
+                new String[]{"PVR: Market City (Premiere)", "Kurla (W)"},
+                new String[]{"INOX: Korum Mall", "Thane (W)"},
+                new String[]{"Miraj Cinemas: R Mall", "Mulund"},
+                new String[]{"Miraj Cinemas: IMAX", "Wadala"}
+            );
+
+            for (String[] data : mumbaiCinemas) {
+                Cinema c = new Cinema();
+                c.setName(data[0]);
+                c.setAddress(data[1]);
+                c.setType("Multiplex"); // Default
+                c.setCity(mumbai);
+                cinemaRepo.save(c);
+            }
+            System.out.println("✅ Loaded " + mumbaiCinemas.size() + " Cinemas for Mumbai.");
+        }
+    }
+
+    private void createCity(String name, String icon) {
+        City c = new City();
+        c.setName(name);
+        c.setIconUrl(icon);
+        cityRepo.save(c);
+    }
+}

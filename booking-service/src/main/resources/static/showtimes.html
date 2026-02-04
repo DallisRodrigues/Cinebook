@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Select Theatre | CineBook</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@24,400,1,0" />
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: { sans: ['Manrope', 'sans-serif'] },
+                    colors: { brand: { red: '#E50914', dark: '#0A0A0A', card: '#151515' } }
+                }
+            }
+        }
+    </script>
+    <style>
+        body { background-color: #0A0A0A; color: white; }
+        .time-btn:hover { background-color: #E50914; color: white; border-color: #E50914; box-shadow: 0 0 10px rgba(229,9,20,0.4); }
+        /* Green dot for M-Ticket */
+        .m-ticket::before { content: '●'; color: #4ade80; font-size: 10px; margin-right: 4px; }
+    </style>
+</head>
+<body>
+
+    <div class="relative w-full h-[350px] overflow-hidden">
+        <img id="bg-backdrop" src="" class="w-full h-full object-cover opacity-40 blur-sm">
+        <div class="absolute inset-0 bg-gradient-to-t from-[#0A0A0A] via-[#0A0A0A]/60 to-transparent flex items-end">
+            <div class="max-w-7xl mx-auto px-6 w-full pb-10 flex gap-6 items-end">
+                <div class="hidden md:block w-40 rounded-lg overflow-hidden shadow-2xl border border-white/10">
+                    <img id="poster-img" src="" class="w-full">
+                </div>
+                <div>
+                    <h1 id="movie-title" class="text-4xl md:text-5xl font-bold text-white mb-2">Loading...</h1>
+                    <div class="flex flex-wrap gap-3 text-sm font-semibold text-gray-300">
+                        <span class="border border-gray-500 px-2 rounded text-[10px] py-0.5 tracking-wider">UA</span>
+                        <span id="genre-tags">Action • Thriller</span>
+                        <span>•</span>
+                        <span id="release-date">Oct 2025</span>
+                        <span>•</span>
+                        <div class="flex items-center gap-1 bg-white/10 px-2 rounded text-white">
+                            <span class="text-green-400 text-lg">★</span> <span id="rating">8.5</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <a href="home.html" class="absolute top-6 left-6 flex items-center gap-2 bg-black/50 backdrop-blur px-4 py-2 rounded-full hover:bg-white/20 transition">
+            <span class="material-symbols-rounded text-sm">arrow_back</span> Back
+        </a>
+    </div>
+
+    <div class="border-b border-gray-800 bg-[#111] sticky top-0 z-40 shadow-xl">
+        <div class="max-w-7xl mx-auto px-6 py-4 flex justify-between items-center">
+            <div class="flex gap-4">
+                <div class="flex flex-col items-center bg-brand-red px-4 py-2 rounded cursor-pointer">
+                    <span class="text-xs font-bold">TODAY</span>
+                    <span class="text-xl font-bold">04</span>
+                </div>
+                <div class="flex flex-col items-center hover:bg-[#222] px-4 py-2 rounded cursor-pointer text-gray-400">
+                    <span class="text-xs">TOM</span>
+                    <span class="text-xl font-bold">05</span>
+                </div>
+                <div class="flex flex-col items-center hover:bg-[#222] px-4 py-2 rounded cursor-pointer text-gray-400">
+                    <span class="text-xs">FRI</span>
+                    <span class="text-xl font-bold">06</span>
+                </div>
+            </div>
+            
+            <div class="flex gap-4 text-xs font-medium text-gray-400">
+                <div class="flex items-center gap-2"><div class="w-2 h-2 rounded-full bg-green-500"></div> Available</div>
+                <div class="flex items-center gap-2"><div class="w-2 h-2 rounded-full bg-orange-500"></div> Fast Filling</div>
+            </div>
+        </div>
+    </div>
+
+    <main class="max-w-7xl mx-auto px-6 py-10 bg-[#0F0F0F] min-h-screen">
+        
+        <div class="flex justify-end mb-6">
+            <div class="bg-[#1a1a1a] border border-[#333] rounded-md px-3 py-2 flex items-center gap-2 w-64">
+                <span class="material-symbols-rounded text-gray-500 text-sm">search</span>
+                <input type="text" placeholder="Filter by Price, Format..." class="bg-transparent text-sm focus:outline-none text-white w-full">
+            </div>
+        </div>
+
+        <div id="theatre-list" class="flex flex-col gap-4">
+            <div class="text-center py-20 animate-pulse text-gray-500">Finding Theaters nearby...</div>
+        </div>
+
+    </main>
+
+    <script>
+        const API_GATEWAY = "http://localhost:8080";
+        const IMAGE_BASE = "https://image.tmdb.org/t/p/original";
+        
+        const urlParams = new URLSearchParams(window.location.search);
+        const MOVIE_ID = urlParams.get('id') || 550;
+        const CITY_ID = urlParams.get('cityId') || 1; // Default to Mumbai
+
+        document.addEventListener("DOMContentLoaded", () => {
+            fetchMovieDetails();
+            fetchCinemas();
+        });
+
+        // 1. Get Movie Metadata (For Header)
+        async function fetchMovieDetails() {
+            try {
+                const res = await fetch(`${API_GATEWAY}/movies/${MOVIE_ID}/details`);
+                const data = await res.json();
+                
+                document.getElementById('bg-backdrop').src = IMAGE_BASE + data.backdrop_path;
+                document.getElementById('poster-img').src = "https://image.tmdb.org/t/p/w500" + data.poster_path;
+                document.getElementById('movie-title').innerText = data.title;
+                document.getElementById('rating').innerText = data.vote_average?.toFixed(1) || "N/A";
+                document.getElementById('release-date').innerText = data.release_date?.split("-")[0] || "2025";
+            } catch(e) { console.error(e); }
+        }
+
+        // 2. Get Cinemas & Generate Showtimes
+        async function fetchCinemas() {
+            try {
+                const res = await fetch(`${API_GATEWAY}/locations/cities/${CITY_ID}/cinemas`);
+                const cinemas = await res.json();
+                renderCinemas(cinemas);
+            } catch(e) {
+                document.getElementById('theatre-list').innerHTML = `<div class="text-red-500 text-center">Failed to load cinemas.</div>`;
+            }
+        }
+
+        function renderCinemas(cinemas) {
+            const container = document.getElementById('theatre-list');
+            container.innerHTML = "";
+
+            if (cinemas.length === 0) {
+                container.innerHTML = `<div class="text-gray-500 text-center">No cinemas found in this city.</div>`;
+                return;
+            }
+
+            // Shuffle cinemas to make it look dynamic
+            const randomCinemas = cinemas.sort(() => 0.5 - Math.random()).slice(0, 15);
+
+            randomCinemas.forEach(c => {
+                // Generate Random Showtimes
+                const times = generateRandomTimes();
+                
+                let timeHtml = "";
+                times.forEach(t => {
+                    // Logic: Click -> Go to Seat Layout with MovieID, CinemaID, and Time
+                    // We combine them into a composite ID for the next page to use
+                    const uniqueShowId = `${MOVIE_ID}_${c.id}_${t.replace(':','')}`;
+                    
+                    timeHtml += `
+                        <button onclick="bookShow('${uniqueShowId}', '${c.name}', '${t}')" 
+                            class="time-btn border border-gray-600 rounded px-4 py-2 text-xs font-bold text-green-400 transition bg-[#1a1a1a]">
+                            ${t}
+                            <div class="text-[8px] text-gray-500 font-normal mt-0.5">4K DOLBY</div>
+                        </button>
+                    `;
+                });
+
+                container.innerHTML += `
+                    <div class="bg-[#151515] border-b border-[#222] p-6 flex flex-col md:flex-row gap-6 hover:bg-[#1a1a1a] transition group">
+                        <div class="md:w-1/4">
+                            <div class="flex items-center gap-2 text-white font-bold mb-1 group-hover:text-brand-red transition">
+                                <span class="material-symbols-rounded text-sm text-gray-500">favorite</span>
+                                ${c.name}
+                            </div>
+                            <div class="flex gap-4 text-[10px] text-purple-400 mt-2">
+                                <span class="m-ticket">M-Ticket</span>
+                                <span class="text-orange-400">● F&B</span>
+                            </div>
+                        </div>
+                        
+                        <div class="md:w-3/4 flex flex-wrap gap-4 items-center">
+                            ${timeHtml}
+                        </div>
+                    </div>
+                `;
+            });
+        }
+
+        function generateRandomTimes() {
+            const allTimes = ["09:30 AM", "10:15 AM", "12:45 PM", "01:30 PM", "03:15 PM", "04:00 PM", "06:45 PM", "07:30 PM", "09:15 PM", "10:45 PM"];
+            // Pick 3 to 6 random times
+            const count = Math.floor(Math.random() * 4) + 3;
+            return allTimes.sort(() => 0.5 - Math.random()).slice(0, count).sort();
+        }
+
+        function bookShow(showId, cinemaName, time) {
+            const title = document.getElementById('movie-title').innerText;
+            // Pass the Composite ID to the next page
+            // We also pass cinema name/time for the UI to display
+            window.location.href = `index.html?id=${showId}&title=${encodeURIComponent(title)}&cinema=${encodeURIComponent(cinemaName)}&time=${time}&tmdbId=${MOVIE_ID}`;
+        }
+    </script>
+</body>
+</html>

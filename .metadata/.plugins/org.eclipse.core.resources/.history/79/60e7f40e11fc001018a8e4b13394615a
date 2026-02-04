@@ -1,5 +1,0 @@
-package com.cinebook.notificationservice.consumer;
-
-public class NotificationListener {
-
-}

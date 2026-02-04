@@ -1,5 +1,0 @@
-package com.cinebook.movieservice.config;
-
-public class CacheConfig {
-
-}

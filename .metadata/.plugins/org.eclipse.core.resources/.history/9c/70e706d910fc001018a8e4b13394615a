@@ -1,5 +1,0 @@
-package com.cinebook.notificationservice.dto;
-
-public class BookingMessage {
-
-}

@@ -1,5 +1,0 @@
-package com.cinebook.bookingservice.config;
-
-public class RabbitMQConfig {
-
-}

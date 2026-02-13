@@ -1,21 +1,21 @@
 package com.cinebook.movieservice.entity;
 
-import jakarta.persistence.*;
+import org.springframework.data.annotation.Id;
+import org.springframework.data.mongodb.core.index.Indexed;
+import org.springframework.data.mongodb.core.mapping.Document;
 
-@Entity
-@Table(name = "users") // 'user' is a reserved keyword in SQL, so we use 'users'
+@Document(collection = "users") // Defines the MongoDB collection name
 public class User {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
+    private String id; // MongoDB uses String IDs (ObjectIds) by default
 
     private String name;
     
-    @Column(unique = true, nullable = false)
+    @Indexed(unique = true) // Ensures email remains unique in MongoDB
     private String email;
     
-    private String passwordHash; // We store the HASH, not the real password
+    private String passwordHash;
 
     // --- CONSTRUCTORS ---
     public User() {}
@@ -27,8 +27,8 @@ public class User {
     }
 
     // --- GETTERS AND SETTERS ---
-    public Long getId() { return id; }
-    public void setId(Long id) { this.id = id; }
+    public String getId() { return id; }
+    public void setId(String id) { this.id = id; }
 
     public String getName() { return name; }
     public void setName(String name) { this.name = name; }

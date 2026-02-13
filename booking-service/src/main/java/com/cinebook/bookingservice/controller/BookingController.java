@@ -1,8 +1,10 @@
 package com.cinebook.bookingservice.controller;
 
 import java.time.LocalDateTime;
+import java.util.List;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import com.cinebook.bookingservice.client.MovieClient;
 import com.cinebook.bookingservice.config.RabbitMQConfig;
@@ -24,33 +26,52 @@ public class BookingController {
     @Autowired
     private RabbitTemplate rabbitTemplate;
 
+    // --- NEW ENDPOINT FOR TICKETS DASHBOARD ---
+    @GetMapping("/user/{userId}")
+    public ResponseEntity<List<Booking>> getUserBookings(@PathVariable String userId) {
+        // userId is now a String to match MongoDB ObjectId
+        List<Booking> userBookings = bookingRepo.findByUserId(userId);
+        return ResponseEntity.ok(userBookings);
+    }
+
     @GetMapping("/create")
     @CircuitBreaker(name = "movieService", fallbackMethod = "bookingFallback")
     public String createBooking(
-            @RequestParam Long userId, 
+            @RequestParam String userId, // Changed to String for MongoDB ID
             @RequestParam Long seatId, 
             @RequestParam Long movieId,
             @RequestParam String email,
-            @RequestParam String movieTitle) { // <--- NEW PARAMETER
+            @RequestParam String movieTitle) {
         
-        System.out.println("DEBUG: Booking Title: " + movieTitle);
+        System.out.println("DEBUG: Processing Booking for: " + movieTitle + " (User: " + userId + ")");
 
-        boolean success = movieClient.bookSeat(seatId, userId);
+        boolean isEvent = (movieId == 0);
+        boolean success = false;
+
+        if (isEvent) {
+            success = true; 
+        } else {
+            // Note: If your MovieService still uses Long for userId internally, 
+            // you may need to handle the conversion or update MovieClient.
+            success = movieClient.bookSeat(seatId, 1L); // Using dummy Long 1L if movie service isn't Mongo-ready yet
+        }
 
         if (success) {
             Booking b = new Booking();
-            b.setUserId(userId);
+            b.setUserId(userId); // Saving the MongoDB String ID to MariaDB
             b.setSeatId(seatId);
             b.setMovieId(movieId);
             b.setBookingTime(LocalDateTime.now());
+            // Optionally set movieTitle if your entity has that field
             bookingRepo.save(b);
 
             try {
-                // Use the REAL title in the message
+                String seatInfo = isEvent ? "General Admission" : "Seat ID: " + seatId;
+
                 BookingMessage message = new BookingMessage(
                     b.getId(), 
-                    movieTitle, // <--- PASS IT HERE
-                    "A" + seatId, 
+                    movieTitle, 
+                    seatInfo, 
                     "CONFIRMED", 
                     email
                 );
@@ -65,7 +86,9 @@ public class BookingController {
         return "Failed";
     }
 
-    public String bookingFallback(Long userId, Long seatId, Long movieId, String email, String movieTitle, Throwable t) {
-        return "⚠️ Service Unavailable";
+    // Fallback updated to match the String userId parameter
+    public String bookingFallback(String userId, Long seatId, Long movieId, String email, String movieTitle, Throwable t) {
+        System.err.println("Circuit Breaker Triggered: " + t.getMessage());
+        return "⚠️ Service Unavailable. Please try again later.";
     }
 }

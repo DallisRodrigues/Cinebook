@@ -16,8 +16,8 @@ public class StripeService {
     @Value("${stripe.api.key}")
     private String stripeApiKey;
 
-    // Change this if you deploy to the cloud!
-    private static final String FRONTEND_URL = "http://localhost:8082";
+    // Everything is now on 8082 as per your setup
+    private static final String APP_URL = "http://localhost:8082";
 
     @PostConstruct
     public void init() {
@@ -35,10 +35,14 @@ public class StripeService {
             // 2. Create Session
             SessionCreateParams params = SessionCreateParams.builder()
                 .setMode(SessionCreateParams.Mode.PAYMENT)
-                // SUCCESS: Goes to the "Ticket Page"
-                .setSuccessUrl(FRONTEND_URL + "/success.html")
-                // CANCEL: Goes to the "Retry Page"
-                .setCancelUrl(FRONTEND_URL + "/cancel.html")
+                
+                // SUCCESS: Redirect back to the processing page on 8082
+                .setSuccessUrl(APP_URL + "/success.html")
+                
+                // CANCEL: Redirect back to the home page on 8082
+                // This ensures the user stays in the same port where they are logged in
+                .setCancelUrl(APP_URL + "/home.html")
+                
                 .addLineItem(
                     SessionCreateParams.LineItem.builder()
                         .setQuantity(1L)
@@ -49,7 +53,7 @@ public class StripeService {
                                 .setProductData(
                                     SessionCreateParams.LineItem.PriceData.ProductData.builder()
                                         .setName("CineBook Tickets")
-                                        .setDescription("Movie Booking (Via Stripe)")
+                                        .setDescription("Movie Booking (Via Stripe Checkout)")
                                         .build()
                                 )
                                 .build()
@@ -63,7 +67,7 @@ public class StripeService {
 
         } catch (Exception e) {
             e.printStackTrace();
-            return null; // Handle error gracefully in Controller
+            return null; 
         }
     }
 }

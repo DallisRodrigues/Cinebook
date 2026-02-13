@@ -1,9 +1,10 @@
 package com.cinebook.movieservice.controller;
 
 import java.util.List;
-import java.util.Map; // <--- Import This
+import java.util.Map;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.ResponseEntity; // <--- Import for better HTTP responses
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -14,7 +15,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.cinebook.movieservice.entity.Seat;
-import com.cinebook.movieservice.repository.SeatRepository; // <--- Import This
+import com.cinebook.movieservice.repository.SeatRepository;
 import com.cinebook.movieservice.service.BmsScraperService;
 import com.cinebook.movieservice.service.MovieService;
 import com.cinebook.movieservice.service.StripeService;
@@ -34,7 +35,7 @@ public class MovieController {
     private BmsScraperService scraperService;
 
     @Autowired
-    private SeatRepository seatRepo; // <--- Added this to save the JSON data directly
+    private SeatRepository seatRepo;
     
     @Autowired
     private StripeService stripeService;
@@ -45,7 +46,7 @@ public class MovieController {
         return tmdbService.getNowPlayingMovies();
     }
 
-    // 2. Get Movie Details + Trailer (Proxy to TMDB)
+    // 2. Get Movie Details (Proxy to TMDB)
     @GetMapping("/{movieId}/details")
     public String getDetails(@PathVariable String movieId) {
         return tmdbService.getMovieDetails(movieId);
@@ -59,59 +60,60 @@ public class MovieController {
         return movieService.getSeats(movieId);
     }
 
-    // 4. Book a Seat
+    // 4. Book a Seat (Single)
     @PutMapping("/seats/{seatId}/book")
     public boolean bookSeat(@PathVariable Long seatId) {
         return movieService.bookSeat(seatId);
     }
+    
+    // 5. Book Multiple Seats
+    @PostMapping("/seats/book-multiple")
+    public boolean bookMultipleSeats(@RequestBody List<Long> seatIds, @RequestParam Long userId) {
+        return movieService.bookSeats(seatIds, userId);
+    }
 
-    // 5. Trigger Scraper (The "Hard Way")
+    // 6. Trigger Scraper
     @PostMapping("/scrape")
     public String triggerScraper(@RequestParam String url, @RequestParam Long movieId) {
         scraperService.scrapeSeatLayout(url, movieId);
         return "🕵️ Scraper started! Watch the CONSOLE for the hidden JSON data.";
     }
- // NEW: Book Multiple Seats
- // ... existing endpoints
 
-    @PostMapping("/seats/book-multiple")
-    public boolean bookMultipleSeats(@RequestBody List<Long> seatIds, @RequestParam Long userId) {
-        return movieService.bookSeats(seatIds, userId);
+    // --- 🆕 7. GET MOVIE TRAILER (The Missing Link) ---
+    @GetMapping("/{id}/trailer")
+    public ResponseEntity<String> getMovieTrailer(@PathVariable String id) {
+        // We call tmdbService directly now!
+        String trailerKey = tmdbService.getMovieTrailer(id);
+        
+        if (trailerKey != null) {
+            return ResponseEntity.ok(trailerKey);
+        } else {
+            return ResponseEntity.notFound().build();
+        }
     }
+
+    // 8. Payment Session
     @PostMapping("/payment/create-session")
     public String createPaymentSession(@RequestParam double amount) {
         return stripeService.createCheckoutSession(amount);
     }
 
-    // 6. Load JSON Data (The "Smart Way" - Simulation Mode)
-    // Usage: Send the JSON payload via Postman to this URL
+    // 9. Load JSON Data
     @PostMapping("/load-seats")
     public String loadSeatData(@RequestBody Map<String, Object> seatData) {
         try {
-            // 1. Extract the "seatLayout" part
             Map<String, Object> layout = (Map<String, Object>) seatData.get("seatLayout");
             List<Map<String, Object>> rows = (List<Map<String, Object>>) layout.get("rows");
-
             int seatsAdded = 0;
             
-            // 2. Loop through every row (A, B, C...)
             for (Map<String, Object> row : rows) {
-                // String rowCode = (String) row.get("rowCode"); // Optional: Use if you want to save row code separately
                 List<Map<String, Object>> seats = (List<Map<String, Object>>) row.get("seats");
-
-                // 3. Loop through every seat in that row
                 for (Map<String, Object> seatObj : seats) {
                     Seat seat = new Seat();
-                    seat.setSeatNumber((String) seatObj.get("id")); // e.g., "A1"
-                    
-                    // Convert status string to our format
+                    seat.setSeatNumber((String) seatObj.get("id"));
                     String status = (String) seatObj.get("status");
-                    // Simple check: if it says "AVAILABLE", set it available, otherwise BOOKED
                     seat.setStatus(status != null && status.equalsIgnoreCase("AVAILABLE") ? "AVAILABLE" : "BOOKED");
-                    
-                    // Hardcode Movie ID 1 for this demo (or extract from JSON if available)
                     seat.setMovieId(1L); 
-                    
                     seatRepo.save(seat);
                     seatsAdded++;
                 }

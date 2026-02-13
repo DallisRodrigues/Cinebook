@@ -18,9 +18,11 @@ public class JwtUtil {
     // This must be 256 bits (32 chars) minimum
     public static final String SECRET = "5367566B59703373367639792F423F4528482B4D6251655468576D5A71347437";
 
-    public String generateToken(String userName) {
+    public String generateToken(String email) {
         Map<String, Object> claims = new HashMap<>();
-        return createToken(claims, userName);
+        // If you decide to add the MongoDB ID to the token claims later:
+        // claims.put("userId", user.getId()); 
+        return createToken(claims, email);
     }
 
     private String createToken(Map<String, Object> claims, String userName) {

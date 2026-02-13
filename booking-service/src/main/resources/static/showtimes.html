@@ -22,43 +22,71 @@
     </script>
     <style>
         body { background-color: #0A0A0A; color: white; }
-        .time-btn:hover { background-color: #E50914; color: white; border-color: #E50914; box-shadow: 0 0 10px rgba(229,9,20,0.4); }
+        .hide-scroll::-webkit-scrollbar { display: none; }
+        .time-btn:hover { background-color: #E50914; color: white; border-color: #E50914; box-shadow: 0 0 15px rgba(229,9,20,0.5); }
         .date-btn.active { background-color: #E50914; color: white; border: none; }
         .date-btn { transition: all 0.2s; }
         .m-ticket::before { content: '●'; color: #4ade80; font-size: 10px; margin-right: 4px; }
         
-        /* Map Modal Styles */
-        #map-modal { transition: opacity 0.3s ease-in-out; }
+        /* Smooth Scale Effect for Cast */
+        .cast-card img { transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1); }
+        .cast-card:hover img { transform: scale(1.1); }
+        .cast-card:hover .ring-container { border-color: #E50914; box-shadow: 0 0 15px rgba(229,9,20,0.4); }
+
+        #map-modal, #trailer-modal { transition: opacity 0.3s ease-in-out; }
         #map { height: 100%; width: 100%; border-radius: 8px; }
     </style>
 </head>
 <body>
 
-    <div class="relative w-full h-[350px] overflow-hidden">
-        <img id="bg-backdrop" src="" class="w-full h-full object-cover opacity-40 blur-sm">
+    <div class="relative w-full h-[450px] overflow-hidden group">
+        <img id="bg-backdrop" src="" class="w-full h-full object-cover opacity-40 blur-sm transition duration-1000 group-hover:scale-110">
         <div class="absolute inset-0 bg-gradient-to-t from-[#0A0A0A] via-[#0A0A0A]/60 to-transparent flex items-end">
-            <div class="max-w-7xl mx-auto px-6 w-full pb-10 flex gap-6 items-end">
-                <div class="hidden md:block w-40 rounded-lg overflow-hidden shadow-2xl border border-white/10">
+            <div class="max-w-7xl mx-auto px-6 w-full pb-10 flex gap-8 items-end">
+                <div class="hidden md:block w-48 rounded-lg overflow-hidden shadow-2xl border border-white/10 relative z-10">
                     <img id="poster-img" src="" class="w-full">
                 </div>
-                <div>
-                    <h1 id="movie-title" class="text-4xl md:text-5xl font-bold text-white mb-2">Loading...</h1>
-                    <div class="flex flex-wrap gap-3 text-sm font-semibold text-gray-300">
-                        <span class="border border-gray-500 px-2 rounded text-[10px] py-0.5 tracking-wider">UA</span>
-                        <span id="genre-tags">Action • Thriller</span>
-                        <span>•</span>
+                <div class="mb-2">
+                    <h1 id="movie-title" class="text-4xl md:text-6xl font-bold text-white mb-3 tracking-tight">Loading...</h1>
+                    
+                    <div class="flex flex-wrap gap-3 text-sm font-semibold text-gray-300 items-center mb-6">
+                        <span class="border border-gray-500 px-2 rounded text-[10px] py-0.5 tracking-wider uppercase">UA</span>
+                        <span id="genre-tags" class="text-gray-200">Action • Thriller</span>
+                        <span class="text-gray-600">•</span>
                         <span id="release-date">2025</span>
-                        <span>•</span>
-                        <div class="flex items-center gap-1 bg-white/10 px-2 rounded text-white">
-                            <span class="text-green-400 text-lg">★</span> <span id="rating">8.5</span>
+                        <span class="text-gray-600">•</span>
+                        <div class="flex items-center gap-1 bg-white/10 px-2 py-0.5 rounded text-white border border-white/10">
+                            <span class="text-green-400 text-base material-symbols-rounded">star</span> 
+                            <span id="rating">8.5</span>
                         </div>
+                    </div>
+
+                    <div class="flex gap-4">
+                        <button id="trailer-btn" onclick="openTrailer()" class="hidden bg-white text-black px-6 py-3 rounded-full font-bold hover:bg-gray-200 transition flex items-center gap-2 shadow-lg hover:scale-105 active:scale-95 transform duration-200">
+                            <span class="material-symbols-rounded text-brand-red text-2xl">play_circle</span> 
+                            Watch Trailer
+                        </button>
                     </div>
                 </div>
             </div>
         </div>
-        <a href="home.html" class="absolute top-6 left-6 flex items-center gap-2 bg-black/50 backdrop-blur px-4 py-2 rounded-full hover:bg-white/20 transition">
+        
+        <a href="home.html" class="absolute top-6 left-6 flex items-center gap-2 bg-black/50 backdrop-blur px-4 py-2 rounded-full hover:bg-white/20 transition z-50 border border-white/10">
             <span class="material-symbols-rounded text-sm">arrow_back</span> Back
         </a>
+    </div>
+
+    <div class="bg-brand-dark border-b border-gray-800">
+        <div class="max-w-7xl mx-auto px-6 py-10">
+            <div class="flex items-center justify-between mb-8">
+                <h3 class="text-xl font-bold flex items-center gap-2">
+                    <span class="material-symbols-rounded text-brand-red">stars</span> Top Cast
+                </h3>
+                <span class="text-xs text-gray-500 font-bold uppercase tracking-widest">Swipe to view</span>
+            </div>
+            <div id="cast-container" class="flex gap-8 overflow-x-auto pb-6 hide-scroll">
+                </div>
+        </div>
     </div>
 
     <div class="border-b border-gray-800 bg-[#111] sticky top-0 z-40 shadow-xl">
@@ -75,16 +103,23 @@
 
     <div id="map-modal" class="fixed inset-0 z-50 flex items-center justify-center bg-black/80 hidden opacity-0 pointer-events-none">
         <div class="bg-[#1a1a1a] w-full max-w-3xl h-[500px] rounded-xl overflow-hidden shadow-2xl border border-gray-800 relative">
-            <button onclick="closeMap()" class="absolute top-4 right-4 z-[9999] bg-black/50 text-white p-2 rounded-full hover:bg-red-600 transition">
+            <button onclick="closeMap()" class="absolute top-4 right-4 z-[9999] bg-black/50 text-white p-2 rounded-full hover:bg-brand-red transition">
                 <span class="material-symbols-rounded">close</span>
             </button>
-            
             <div id="map"></div>
-            
             <div class="absolute bottom-4 left-4 z-[9999] bg-white text-black px-4 py-2 rounded font-bold shadow-lg flex items-center gap-2">
-                <span class="material-symbols-rounded text-red-600">location_on</span>
+                <span class="material-symbols-rounded text-brand-red">location_on</span>
                 <span id="map-label">Cinema Location</span>
             </div>
+        </div>
+    </div>
+
+    <div id="trailer-modal" class="fixed inset-0 z-[60] bg-black/95 hidden flex items-center justify-center p-4 opacity-0 pointer-events-none transition-opacity duration-300">
+        <div class="relative w-full max-w-5xl aspect-video bg-black rounded-xl overflow-hidden shadow-2xl border border-gray-800">
+            <button onclick="closeTrailer()" class="absolute top-4 right-4 z-10 bg-black/50 text-white p-2 rounded-full hover:bg-brand-red transition backdrop-blur-md">
+                <span class="material-symbols-rounded">close</span>
+            </button>
+            <iframe id="trailer-frame" class="w-full h-full" src="" frameborder="0" allow="autoplay; encrypted-media" allowfullscreen></iframe>
         </div>
     </div>
 
@@ -97,32 +132,105 @@
 
         let cachedCinemas = [];
         let selectedDateIndex = 0;
+        let trailerKey = null;
         const dates = [];
-        
-        // Map Variables
         let mapInstance = null;
         let markerInstance = null;
 
         document.addEventListener("DOMContentLoaded", () => {
             generateDates();
             fetchMovieDetails();
+            fetchTrailer();
             fetchCinemas();
         });
 
-        // --- EXISTING LOGIC (Dates, Movie Data) ---
+        async function fetchMovieDetails() {
+            try {
+                const res = await fetch(`${API_GATEWAY}/movies/${MOVIE_ID}/details`);
+                const data = await res.json();
+                
+                if(data.backdrop_path) document.getElementById('bg-backdrop').src = IMAGE_BASE + data.backdrop_path;
+                if(data.poster_path) document.getElementById('poster-img').src = "https://image.tmdb.org/t/p/w500" + data.poster_path;
+                
+                document.getElementById('movie-title').innerText = data.title;
+                document.getElementById('rating').innerText = data.vote_average?.toFixed(1) || "N/A";
+                document.getElementById('release-date').innerText = data.release_date?.split("-")[0] || "2025";
+                
+                if(data.genres) {
+                    document.getElementById('genre-tags').innerText = data.genres.map(g => g.name).join(' • ');
+                }
+
+                renderCast(data.credits?.cast || []);
+                
+            } catch(e) { console.error("Error fetching details", e); }
+        }
+
+        function renderCast(cast) {
+            const container = document.getElementById('cast-container');
+            container.innerHTML = "";
+            
+            if (cast.length === 0) {
+                container.innerHTML = `<span class="text-gray-500 italic">Cast information unavailable</span>`;
+                return;
+            }
+
+            cast.slice(0, 15).forEach(actor => {
+                const profileImg = actor.profile_path 
+                    ? `https://image.tmdb.org/t/p/w185${actor.profile_path}`
+                    : `https://ui-avatars.com/api/?name=${encodeURIComponent(actor.name)}&background=1a1a1a&color=fff`;
+
+                container.innerHTML += `
+                    <div class="flex flex-col items-center min-w-[110px] text-center cast-card cursor-pointer">
+                        <div class="ring-container w-24 h-24 rounded-full overflow-hidden mb-4 border-2 border-white/10 transition-all duration-300 relative shadow-2xl">
+                            <img src="${profileImg}" class="w-full h-full object-cover">
+                        </div>
+                        <span class="text-xs font-bold text-gray-200 group-hover:text-white transition duration-300 block truncate w-28">${actor.name}</span>
+                        <span class="text-[10px] text-gray-500 block truncate w-28 mt-1 uppercase tracking-tighter">${actor.character}</span>
+                    </div>
+                `;
+            });
+        }
+
+        async function fetchTrailer() {
+            try {
+                const res = await fetch(`${API_GATEWAY}/movies/${MOVIE_ID}/trailer`);
+                if (res.ok) {
+                    trailerKey = await res.text();
+                    document.getElementById('trailer-btn').classList.remove('hidden');
+                }
+            } catch (e) { console.log("Trailer not found"); }
+        }
+
+        function openTrailer() {
+            if (!trailerKey) return;
+            const modal = document.getElementById('trailer-modal');
+            const frame = document.getElementById('trailer-frame');
+            frame.src = `https://www.youtube.com/embed/${trailerKey}?autoplay=1&rel=0`;
+            modal.classList.remove('hidden', 'pointer-events-none');
+            setTimeout(() => modal.classList.remove('opacity-0'), 10);
+        }
+
+        function closeTrailer() {
+            const modal = document.getElementById('trailer-modal');
+            const frame = document.getElementById('trailer-frame');
+            modal.classList.add('opacity-0');
+            setTimeout(() => {
+                modal.classList.add('hidden', 'pointer-events-none');
+                frame.src = "";
+            }, 300);
+        }
+
         function generateDates() {
             const container = document.getElementById('date-container');
             container.innerHTML = "";
             const days = ['SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT'];
             const today = new Date();
-
             for (let i = 0; i < 7; i++) {
                 const d = new Date(today);
                 d.setDate(today.getDate() + i);
                 const dayName = i === 0 ? "TODAY" : i === 1 ? "TOM" : days[d.getDay()];
                 const dayNum = d.getDate();
                 dates.push({ short: `${dayName} ${dayNum}`, full: d.toDateString() });
-
                 const btn = document.createElement('div');
                 btn.className = `date-btn flex flex-col items-center px-4 py-2 rounded cursor-pointer ${i === 0 ? 'active' : 'text-gray-400 hover:bg-[#222]'}`;
                 btn.innerHTML = `<span class="text-xs font-bold">${dayName}</span><span class="text-xl font-bold">${dayNum}</span>`;
@@ -142,18 +250,6 @@
             renderCinemas(cachedCinemas);
         }
 
-        async function fetchMovieDetails() {
-            try {
-                const res = await fetch(`${API_GATEWAY}/movies/${MOVIE_ID}/details`);
-                const data = await res.json();
-                if(data.backdrop_path) document.getElementById('bg-backdrop').src = IMAGE_BASE + data.backdrop_path;
-                if(data.poster_path) document.getElementById('poster-img').src = "https://image.tmdb.org/t/p/w500" + data.poster_path;
-                document.getElementById('movie-title').innerText = data.title;
-                document.getElementById('rating').innerText = data.vote_average?.toFixed(1) || "N/A";
-                document.getElementById('release-date').innerText = data.release_date?.split("-")[0] || "2025";
-            } catch(e) {}
-        }
-
         async function fetchCinemas() {
             try {
                 const res = await fetch(`${API_GATEWAY}/locations/cities/${CITY_ID}/cinemas`);
@@ -164,104 +260,51 @@
             }
         }
 
-        // --- UPDATED: Render Cinemas with new Map Logic ---
         function renderCinemas(cinemas) {
             const container = document.getElementById('theatre-list');
             container.innerHTML = "";
-
             if (cinemas.length === 0) {
                 container.innerHTML = `<div class="text-gray-500 text-center">No cinemas found.</div>`;
                 return;
             }
-
-            const shuffled = [...cinemas].sort(() => 0.5 - Math.random());
-            const displayList = shuffled.slice(0, 15);
-
+            const displayList = [...cinemas].sort(() => 0.5 - Math.random()).slice(0, 15);
             displayList.forEach(c => {
-                const times = generateRandomTimes();
+                const times = ["09:30 AM", "12:45 PM", "04:00 PM", "07:30 PM", "10:45 PM"].sort(() => 0.5 - Math.random()).slice(0, 3).sort();
                 let timeHtml = "";
                 times.forEach(t => {
                     const uniqueShowId = `${MOVIE_ID}_${c.id}_${selectedDateIndex}_${t.replace(/[: ]/g,'')}`;
-                    timeHtml += `
-                        <button onclick="bookShow('${uniqueShowId}', '${c.name}', '${t}')" 
-                            class="time-btn border border-gray-600 rounded px-4 py-2 text-xs font-bold text-green-400 transition bg-[#1a1a1a]">
-                            ${t} <div class="text-[8px] text-gray-500 font-normal mt-0.5">4K DOLBY</div>
-                        </button>
-                    `;
+                    timeHtml += `<button onclick="bookShow('${uniqueShowId}', '${c.name}', '${t}')" class="time-btn border border-gray-600 rounded px-4 py-2 text-xs font-bold text-green-400 transition bg-[#1a1a1a]">${t}</button>`;
                 });
-
-                // New Logic: Extract Lat/Long safely
-                const lat = c.latitude || 20.5937; 
-                const lng = c.longitude || 78.9629;
-
                 container.innerHTML += `
                     <div class="bg-[#151515] border-b border-[#222] p-6 flex flex-col md:flex-row gap-6 hover:bg-[#1a1a1a] transition group">
                         <div class="md:w-1/4">
-                            <div class="flex items-center gap-2 text-white font-bold mb-1 group-hover:text-brand-red transition">
-                                <span class="material-symbols-rounded text-sm text-gray-500">favorite</span>
-                                ${c.name}
-                            </div>
-                            
-                            <button onclick="openMapDirectly(${lat}, ${lng}, '${c.name}', '${c.address}')" 
-                                class="mt-3 flex items-center gap-2 bg-gray-800 hover:bg-green-600 text-white px-3 py-1.5 rounded-full text-xs transition border border-gray-700 w-fit">
-                                <span class="material-symbols-rounded text-[14px]">map</span> 
-                                View Location
+                            <div class="text-white font-bold mb-1">${c.name}</div>
+                            <button onclick="openMapDirectly(${c.latitude || 20.5}, ${c.longitude || 78.9}, '${c.name}', '${c.address}')" class="mt-3 flex items-center gap-2 bg-gray-800 text-white px-3 py-1.5 rounded-full text-xs transition border border-gray-700 w-fit">
+                                <span class="material-symbols-rounded text-sm">map</span> View Location
                             </button>
-                            <div class="flex gap-4 text-[10px] text-purple-400 mt-2">
-                                <span class="m-ticket">M-Ticket</span>
-                                <span class="text-orange-400">● F&B</span>
-                            </div>
                         </div>
-                        <div class="md:w-3/4 flex flex-wrap gap-4 items-center">
-                            ${timeHtml}
-                        </div>
+                        <div class="md:w-3/4 flex flex-wrap gap-4 items-center">${timeHtml}</div>
                     </div>
                 `;
             });
         }
 
-        function generateRandomTimes() {
-            const allTimes = ["09:30 AM", "10:15 AM", "12:45 PM", "01:30 PM", "03:15 PM", "04:00 PM", "06:45 PM", "07:30 PM", "09:15 PM", "10:45 PM"];
-            return allTimes.sort(() => 0.5 - Math.random()).slice(0, Math.floor(Math.random() * 4) + 3).sort();
-        }
-
         function bookShow(showId, cinemaName, time) {
             const title = document.getElementById('movie-title').innerText;
             const dateObj = dates[selectedDateIndex];
-            const fullTimeDisplay = `${dateObj.short}, ${time}`;
-            window.location.href = `index.html?id=${showId}&title=${encodeURIComponent(title)}&cinema=${encodeURIComponent(cinemaName)}&time=${encodeURIComponent(fullTimeDisplay)}&tmdbId=${MOVIE_ID}`;
+            window.location.href = `index.html?id=${showId}&title=${encodeURIComponent(title)}&cinema=${encodeURIComponent(cinemaName)}&time=${encodeURIComponent(dateObj.short + ', ' + time)}&tmdbId=${MOVIE_ID}`;
         }
 
-        // --- NEW INSTANT MAP FUNCTION ---
         function openMapDirectly(lat, lng, name, address) {
             const modal = document.getElementById('map-modal');
-            const label = document.getElementById('map-label');
-            
-            // 1. Show Modal
             modal.classList.remove('hidden', 'opacity-0', 'pointer-events-none');
-            label.innerText = name;
-
-            // 2. Initialize Map (only once)
+            document.getElementById('map-label').innerText = name;
             if (!mapInstance) {
                 mapInstance = L.map('map').setView([lat, lng], 15);
-                L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-                    attribution: '© OpenStreetMap contributors'
-                }).addTo(mapInstance);
-            } else {
-                // If map exists, just fly to the new location
-                mapInstance.setView([lat, lng], 15);
-            }
-
-            // 3. Update Marker
-            if (markerInstance) {
-                mapInstance.removeLayer(markerInstance);
-            }
-            
-            markerInstance = L.marker([lat, lng]).addTo(mapInstance)
-                .bindPopup(`<b>${name}</b><br>${address}`)
-                .openPopup();
-            
-            // Fix map rendering issue (gray box) when opening hidden modal
+                L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(mapInstance);
+            } else { mapInstance.setView([lat, lng], 15); }
+            if (markerInstance) mapInstance.removeLayer(markerInstance);
+            markerInstance = L.marker([lat, lng]).addTo(mapInstance).bindPopup(`<b>${name}</b><br>${address}`).openPopup();
             setTimeout(() => { mapInstance.invalidateSize(); }, 300);
         }
 
@@ -269,7 +312,6 @@
             const modal = document.getElementById('map-modal');
             modal.classList.add('hidden', 'opacity-0', 'pointer-events-none');
         }
-
     </script>
 </body>
 </html>

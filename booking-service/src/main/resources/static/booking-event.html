@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Book Event | CineBook</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@300;400;600;700;800&display=swap" rel="stylesheet">
+    <script src="js/auth-interceptor.js"></script>
+    <style>
+        body { background-color: #0A0A0A; color: white; font-family: 'Manrope', sans-serif; }
+        .glass { background: rgba(255, 255, 255, 0.03); backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,0.1); }
+    </style>
+</head>
+<body class="p-6 md:p-20">
+    <div class="max-w-4xl mx-auto">
+        <button onclick="history.back()" class="mb-10 text-gray-500 hover:text-white transition flex items-center gap-2">
+            <span>←</span> Back to Events
+        </button>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-12">
+            <div class="rounded-[2.5rem] overflow-hidden aspect-square shadow-2xl border border-white/5">
+                <img id="event-img" src="https://images.unsplash.com/photo-1470225620780-dba8ba36b745?auto=format&fit=crop&w=800" class="w-full h-full object-cover">
+            </div>
+
+            <div class="flex flex-col justify-center">
+                <span class="text-brand-red font-black uppercase tracking-[0.3em] text-[10px] mb-4">Live Experience</span>
+                <h1 id="event-title" class="text-5xl font-black mb-2 tracking-tighter uppercase">Loading...</h1>
+                <p id="event-loc" class="text-gray-500 font-bold mb-8">Venue Details Loading...</p>
+
+                <div class="glass p-8 rounded-3xl mb-8">
+                    <div class="flex justify-between items-center mb-6">
+                        <span class="text-gray-400 font-bold">Price per Ticket</span>
+                        <span id="unit-price-display" class="text-2xl font-black text-white">₹ 0</span>
+                    </div>
+                    <div class="flex justify-between items-center">
+                        <span class="text-gray-400 font-bold">Quantity</span>
+                        <div class="flex items-center gap-4 bg-white/5 rounded-xl p-2 border border-white/10">
+                            <button onclick="updateQty(-1)" class="w-10 h-10 flex items-center justify-center hover:bg-white/10 rounded-lg font-bold">-</button>
+                            <span id="qty" class="font-black w-6 text-center text-lg">1</span>
+                            <button onclick="updateQty(1)" class="w-10 h-10 flex items-center justify-center hover:bg-white/10 rounded-lg font-bold">+</button>
+                        </div>
+                    </div>
+                </div>
+
+                <button onclick="processEventBooking()" class="w-full bg-white text-black py-5 rounded-2xl font-black uppercase tracking-widest hover:bg-[#E50914] hover:text-white transition shadow-2xl transform active:scale-95">
+                    Proceed to Pay (₹<span id="total-price">0</span>)
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const API_GATEWAY = "http://localhost:8080";
+        const params = new URLSearchParams(window.location.search);
+        const eventName = params.get('name') || "Special Event";
+        
+        // Mock Data based on what we showed on Home Page
+        const eventData = {
+            "Sunburn Goa 2026": { price: 2500, loc: "Vagator Beach, Goa", img: "https://images.unsplash.com/photo-1470225620780-dba8ba36b745?auto=format&fit=crop&w=800" },
+            "IPL Final Screening": { price: 199, loc: "CineBook Multiplexes", img: "https://images.unsplash.com/photo-1540747913346-19e32dc3e97e?auto=format&fit=crop&w=800" },
+            "Comic Con Mumbai": { price: 999, loc: "BKC, Mumbai", img: "https://images.unsplash.com/photo-1613376023733-0a73315d9b06?auto=format&fit=crop&w=800" },
+            "The Laugh Tour": { price: 499, loc: "Local Studios", img: "https://images.unsplash.com/photo-1514525253361-b83f859b73c0?auto=format&fit=crop&w=800" }
+        };
+
+        const currentEvent = eventData[eventName] || { price: 500, loc: "TBA", img: "" };
+        let qty = 1;
+
+        document.addEventListener("DOMContentLoaded", () => {
+            document.getElementById('event-title').innerText = eventName;
+            document.getElementById('event-loc').innerText = currentEvent.loc;
+            if(currentEvent.img) document.getElementById('event-img').src = currentEvent.img;
+            document.getElementById('unit-price-display').innerText = `₹ ${currentEvent.price}`;
+            updateTotalPrice();
+        });
+
+        function updateQty(val) {
+            qty = Math.max(1, qty + val);
+            document.getElementById('qty').innerText = qty;
+            updateTotalPrice();
+        }
+
+        function updateTotalPrice() {
+            document.getElementById('total-price').innerText = qty * currentEvent.price;
+        }
+
+        async function processEventBooking() {
+            const userStr = localStorage.getItem('user'); // Matches your index.html
+            if (!userStr) {
+                Swal.fire("Login Required", "Please login to book events", "warning").then(() => location.href = 'login.html');
+                return;
+            }
+
+            const bookingData = {
+                // For events, we pass a dummy Seat ID (e.g., 9999) or handle it as "GA" (General Admission)
+                seatIds: [9999], 
+                movieId: 0, // 0 indicates an Event
+                movieTitle: eventName,
+                price: document.getElementById('total-price').innerText,
+                user: JSON.parse(userStr),
+                quantity: qty
+            };
+
+            // Store in Session just like Movie Booking
+            sessionStorage.setItem('pendingBooking', JSON.stringify(bookingData));
+
+            try {
+                Swal.fire({ title: 'Opening Secure Payment...', didOpen: () => Swal.showLoading() });
+                
+                const amount = document.getElementById('total-price').innerText;
+                const payRes = await fetch(`${API_GATEWAY}/movies/payment/create-session?amount=${amount}`, {
+                    method: 'POST'
+                });
+                const paymentUrl = await payRes.text();
+                
+                if (paymentUrl.startsWith("http")) {
+                    window.location.href = paymentUrl;
+                } else {
+                    throw new Error("Invalid URL");
+                }
+            } catch (e) {
+                Swal.fire("Error", "Could not connect to payment gateway", "error");
+            }
+        }
+    </script>
+</body>
+</html>

@@ -10,6 +10,8 @@ import org.springframework.http.client.reactive.ReactorClientHttpConnector;
 import org.springframework.stereotype.Service;
 import org.springframework.web.reactive.function.client.WebClient;
 import reactor.netty.http.client.HttpClient;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 
 import java.time.Duration;
 import java.util.concurrent.TimeUnit;
@@ -28,7 +30,6 @@ public class TmdbService {
 
     public TmdbService(@Value("${tmdb.api.base-url}") String baseUrl) {
         // --- ⏱️ TIMEOUT CONFIGURATION (5 Seconds) ---
-        // If TMDB takes longer than 5s, we abort and use fallback data.
         HttpClient httpClient = HttpClient.create()
                 .option(ChannelOption.CONNECT_TIMEOUT_MILLIS, 5000)
                 .responseTimeout(Duration.ofSeconds(5))
@@ -43,13 +44,9 @@ public class TmdbService {
     }
 
     // --- 🚀 AUTO-STARTUP FETCH ---
-    // This runs automatically when the App starts. 
-    // It tries to grab real data immediately so it's ready for the user.
     @PostConstruct
     public void seedDataOnStartup() {
         System.out.println("🌱 Startup: Attempting to fetch Real Movie Data...");
-        // We call the method, but we don't return anything since it's just seeding
-        // The method itself will update 'lastRealData' if successful
         try {
             getNowPlayingMovies(); 
         } catch (Exception e) {
@@ -110,6 +107,56 @@ public class TmdbService {
             System.err.println("⚠️ TMDB Details Failed. Using Mock.");
             return MOCK_DETAILS;
         }
+    }
+
+    // 3. Get Trailer (SMARTER VERSION)
+    // Prioritizes "Trailer", but accepts "Teaser" if no trailer is found.
+    public String getMovieTrailer(String movieId) {
+        try {
+            // Fetch videos for the movie
+            String response = webClient.get()
+                    .uri(uriBuilder -> uriBuilder
+                            .path("/movie/" + movieId + "/videos")
+                            .queryParam("api_key", apiKey)
+                            .build())
+                    .retrieve()
+                    .bodyToMono(String.class)
+                    .block();
+
+            // Parse JSON 
+            ObjectMapper mapper = new ObjectMapper();
+            JsonNode root = mapper.readTree(response);
+            JsonNode results = root.path("results");
+
+            String bestVideoKey = null;
+
+            if (results.isArray()) {
+                for (JsonNode node : results) {
+                    String type = node.path("type").asText();
+                    String site = node.path("site").asText();
+
+                    // Ensure it is a YouTube video
+                    if ("YouTube".equalsIgnoreCase(site)) {
+                        
+                        // Priority 1: Official Trailer (Return immediately if found)
+                        if ("Trailer".equalsIgnoreCase(type)) {
+                            return node.path("key").asText(); 
+                        }
+                        
+                        // Priority 2: Teaser (Save it, only use if no trailer is found later)
+                        if ("Teaser".equalsIgnoreCase(type) && bestVideoKey == null) {
+                            bestVideoKey = node.path("key").asText();
+                        }
+                    }
+                }
+            }
+            // Return whatever we found (Trailer was already returned, so this is likely a Teaser or null)
+            return bestVideoKey;
+
+        } catch (Exception e) {
+            System.err.println("⚠️ Failed to fetch trailer: " + e.getMessage());
+        }
+        return null; // Return null if nothing found
     }
 
     // --- MOCK DATA ---

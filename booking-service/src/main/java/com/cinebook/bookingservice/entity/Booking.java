@@ -10,7 +10,9 @@ public class Booking {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    private Long userId;
+    // Correctly defined as String to hold MongoDB ObjectId
+    private String userId; 
+    
     private Long movieId;
     private Long seatId;
     private LocalDateTime bookingTime;
@@ -19,8 +21,11 @@ public class Booking {
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }
 
-    public Long getUserId() { return userId; }
-    public void setUserId(Long userId) { this.userId = userId; }
+    // FIXED: Changed return type to String
+    public String getUserId() { return userId; } 
+    
+    // FIXED: Changed parameter type to String
+    public void setUserId(String userId) { this.userId = userId; } 
 
     public Long getMovieId() { return movieId; }
     public void setMovieId(Long movieId) { this.movieId = movieId; }
